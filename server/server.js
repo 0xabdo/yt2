@@ -62,6 +62,10 @@ function getCookies() {
       console.log('Sample cookies:', JSON.stringify(cookies.slice(0, 3), null, 2));
       console.log('Cookie string format:', cookies.map(c => `${c.name}=${c.value}`).join('; '));
       console.log('Total cookies loaded:', cookies.length);
+      
+      // Additional debugging for cookie parsing
+      console.log('First cookie line from file:', cookieLines[0]);
+      console.log('Cookie parts:', cookieLines[0]?.split('\t'));
     }
     
     return cookies;
@@ -71,8 +75,28 @@ function getCookies() {
   }
 }
 
+// Function to validate cookie format
+function validateCookies(cookies) {
+  if (cookies.length === 0) return false;
+  
+  const requiredProps = ['name', 'value', 'domain', 'path'];
+  const isValid = cookies.every(cookie => 
+    requiredProps.every(prop => cookie.hasOwnProperty(prop) && cookie[prop])
+  );
+  
+  console.log('Cookie validation:', isValid ? 'PASSED' : 'FAILED');
+  if (!isValid) {
+    console.log('Invalid cookies found:', cookies.filter(cookie => 
+      !requiredProps.every(prop => cookie.hasOwnProperty(prop) && cookie[prop])
+    ));
+  }
+  
+  return isValid;
+}
+
 // Get cookies once at startup
 const cookies = getCookies();
+validateCookies(cookies);
 
 // Routes
 app.get('/api/health', (req, res) => {
@@ -101,8 +125,23 @@ app.get('/api/video-info', async (req, res) => {
       return res.status(400).json({ error: 'Invalid YouTube URL' });
     }
 
-    const options = cookies.length > 0 ? { cookies: cookies } : {};
+    const options = cookies.length > 0 ? { 
+      requestOptions: { 
+        headers: { 
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.5',
+          'Accept-Encoding': 'gzip, deflate',
+          'DNT': '1',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1',
+          'Cookie': cookies.map(c => `${c.name}=${c.value}`).join('; ')
+        } 
+      } 
+    } : {};
     console.log('Video info options:', JSON.stringify(options, null, 2));
+    console.log('Cookies being used:', JSON.stringify(cookies.slice(0, 3), null, 2));
+    console.log('Attempting to get video info with cookies...');
     const info = await ytdl.getInfo(url, options);
     
     const videoDetails = {
@@ -133,7 +172,20 @@ app.get('/api/download', async (req, res) => {
       return res.status(400).json({ error: 'Invalid YouTube URL' });
     }
 
-    const options = cookies.length > 0 ? { cookies: cookies } : {};
+    const options = cookies.length > 0 ? { 
+      requestOptions: { 
+        headers: { 
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.5',
+          'Accept-Encoding': 'gzip, deflate',
+          'DNT': '1',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1',
+          'Cookie': cookies.map(c => `${c.name}=${c.value}`).join('; ')
+        } 
+      } 
+    } : {};
     const info = await ytdl.getInfo(url, options);
     
     const videoTitle = info.videoDetails.title.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_');
@@ -148,7 +200,18 @@ app.get('/api/download', async (req, res) => {
     const stream = ytdl(url, {
       format: format === 'mp3' ? 'audioonly' : 'videoandaudio',
       quality: 'highest',
-      cookies: cookies.length > 0 ? cookies : undefined
+      requestOptions: cookies.length > 0 ? { 
+        headers: { 
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.5',
+          'Accept-Encoding': 'gzip, deflate',
+          'DNT': '1',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1',
+          'Cookie': cookies.map(c => `${c.name}=${c.value}`).join('; ')
+        } 
+      } : {}
     });
 
     // Pipe the stream to response
@@ -183,7 +246,20 @@ app.get('/api/formats', async (req, res) => {
       return res.status(400).json({ error: 'Invalid YouTube URL' });
     }
 
-    const options = cookies.length > 0 ? { cookies: cookies } : {};
+    const options = cookies.length > 0 ? { 
+      requestOptions: { 
+        headers: { 
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.5',
+          'Accept-Encoding': 'gzip, deflate',
+          'DNT': '1',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1',
+          'Cookie': cookies.map(c => `${c.name}=${c.value}`).join('; ')
+        } 
+      } 
+    } : {};
     const info = await ytdl.getInfo(url, options);
     
     const formats = ytdl.filterFormats(info.formats, 'videoandaudio');
