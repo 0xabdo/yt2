@@ -41,13 +41,15 @@ function getCookies() {
       line.trim() && !line.startsWith('#') && line.includes('\t')
     );
     
-    // Parse cookies in the exact format ytdl-core expects: { name, value }
+    // Parse cookies in the exact format ytdl-core expects: { name, value, domain, path }
     const cookies = cookieLines.map(line => {
       const parts = line.split('\t');
       if (parts.length >= 7) {
         return {
           name: parts[5],
-          value: parts[6]
+          value: parts[6],
+          domain: parts[0],
+          path: parts[2]
         };
       }
       return null;
@@ -57,8 +59,9 @@ function getCookies() {
     
     // Debug: Log first few cookies to verify format
     if (cookies.length > 0) {
-      console.log('Sample cookies:', cookies.slice(0, 3));
+      console.log('Sample cookies:', JSON.stringify(cookies.slice(0, 3), null, 2));
       console.log('Cookie string format:', cookies.map(c => `${c.name}=${c.value}`).join('; '));
+      console.log('Total cookies loaded:', cookies.length);
     }
     
     return cookies;
@@ -76,6 +79,15 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'YouTube Downloader API is running' });
 });
 
+// Test cookies endpoint
+app.get('/api/test-cookies', (req, res) => {
+  res.json({ 
+    cookiesLoaded: cookies.length,
+    sampleCookies: cookies.slice(0, 3),
+    cookieString: cookies.map(c => `${c.name}=${c.value}`).join('; ')
+  });
+});
+
 // Get video info
 app.get('/api/video-info', async (req, res) => {
   try {
@@ -89,13 +101,7 @@ app.get('/api/video-info', async (req, res) => {
       return res.status(400).json({ error: 'Invalid YouTube URL' });
     }
 
-    const options = cookies.length > 0 ? { 
-      requestOptions: { 
-        headers: { 
-          cookie: cookies.map(c => `${c.name}=${c.value}`).join('; ')
-        } 
-      } 
-    } : {};
+    const options = cookies.length > 0 ? { cookies: cookies } : {};
     console.log('Video info options:', JSON.stringify(options, null, 2));
     const info = await ytdl.getInfo(url, options);
     
@@ -127,13 +133,7 @@ app.get('/api/download', async (req, res) => {
       return res.status(400).json({ error: 'Invalid YouTube URL' });
     }
 
-    const options = cookies.length > 0 ? { 
-      requestOptions: { 
-        headers: { 
-          cookie: cookies.map(c => `${c.name}=${c.value}`).join('; ')
-        } 
-      } 
-    } : {};
+    const options = cookies.length > 0 ? { cookies: cookies } : {};
     const info = await ytdl.getInfo(url, options);
     
     const videoTitle = info.videoDetails.title.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_');
@@ -148,11 +148,7 @@ app.get('/api/download', async (req, res) => {
     const stream = ytdl(url, {
       format: format === 'mp3' ? 'audioonly' : 'videoandaudio',
       quality: 'highest',
-      requestOptions: cookies.length > 0 ? { 
-        headers: { 
-          cookie: cookies.map(c => `${c.name}=${c.value}`).join('; ')
-        } 
-      } : {}
+      cookies: cookies.length > 0 ? cookies : undefined
     });
 
     // Pipe the stream to response
@@ -187,13 +183,7 @@ app.get('/api/formats', async (req, res) => {
       return res.status(400).json({ error: 'Invalid YouTube URL' });
     }
 
-    const options = cookies.length > 0 ? { 
-      requestOptions: { 
-        headers: { 
-          cookie: cookies.map(c => `${c.name}=${c.value}`).join('; ')
-        } 
-      } 
-    } : {};
+    const options = cookies.length > 0 ? { cookies: cookies } : {};
     const info = await ytdl.getInfo(url, options);
     
     const formats = ytdl.filterFormats(info.formats, 'videoandaudio');
