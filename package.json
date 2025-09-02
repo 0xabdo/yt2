@@ -1,0 +1,26 @@
+{
+  "name": "exify-youtube-downloader",
+  "version": "1.0.0",
+  "description": "YouTube video downloader with React frontend and Node.js backend",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "cd server && npm start",
+    "build": "cd client && npm install && npm run build",
+    "install-all": "npm install && cd client && npm install && cd ../server && npm install",
+    "dev": "concurrently \"cd server && npm run dev\" \"cd client && npm start\"",
+    "postinstall": "npm run build"
+  },
+  "dependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "keywords": ["youtube", "downloader", "react", "nodejs", "express"],
+  "author": "Your Name",
+  "license": "MIT"
+}
