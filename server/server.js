@@ -23,6 +23,39 @@ if (fs.existsSync(clientBuildPath)) {
 const downloadsDir = path.join(__dirname, '..', 'downloads');
 fs.ensureDirSync(downloadsDir);
 
+// Function to read and parse cookies.txt
+function getCookies() {
+  try {
+    const cookiesPath = path.join(__dirname, '..', 'cookies.txt');
+    if (!fs.existsSync(cookiesPath)) {
+      console.log('cookies.txt not found, proceeding without cookies');
+      return '';
+    }
+    
+    const cookiesContent = fs.readFileSync(cookiesPath, 'utf8');
+    const cookieLines = cookiesContent.split('\n').filter(line => 
+      line.trim() && !line.startsWith('#') && line.includes('\t')
+    );
+    
+    const cookies = cookieLines.map(line => {
+      const parts = line.split('\t');
+      if (parts.length >= 7) {
+        return `${parts[5]}=${parts[6]}`;
+      }
+      return '';
+    }).filter(cookie => cookie).join('; ');
+    
+    console.log('Cookies loaded successfully');
+    return cookies;
+  } catch (error) {
+    console.error('Error reading cookies.txt:', error);
+    return '';
+  }
+}
+
+// Get cookies once at startup
+const cookies = getCookies();
+
 // Routes
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'YouTube Downloader API is running' });
@@ -41,7 +74,9 @@ app.get('/api/video-info', async (req, res) => {
       return res.status(400).json({ error: 'Invalid YouTube URL' });
     }
 
-    const info = await ytdl.getInfo(url);
+    const options = cookies ? { requestOptions: { headers: { cookie: cookies } } } : {};
+    const info = await ytdl.getInfo(url, options);
+    
     const videoDetails = {
       title: info.videoDetails.title,
       thumbnail: info.videoDetails.thumbnails[0]?.url,
@@ -70,7 +105,9 @@ app.get('/api/download', async (req, res) => {
       return res.status(400).json({ error: 'Invalid YouTube URL' });
     }
 
-    const info = await ytdl.getInfo(url);
+    const options = cookies ? { requestOptions: { headers: { cookie: cookies } } } : {};
+    const info = await ytdl.getInfo(url, options);
+    
     const videoTitle = info.videoDetails.title.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_');
     const fileName = `${videoTitle}.${format}`;
     const filePath = path.join(downloadsDir, fileName);
@@ -79,10 +116,11 @@ app.get('/api/download', async (req, res) => {
     res.header('Content-Disposition', `attachment; filename="${fileName}"`);
     res.header('Content-Type', 'application/octet-stream');
 
-    // Create download stream
+    // Create download stream with cookies
     const stream = ytdl(url, {
       format: format === 'mp3' ? 'audioonly' : 'videoandaudio',
-      quality: 'highest'
+      quality: 'highest',
+      requestOptions: cookies ? { headers: { cookie: cookies } } : {}
     });
 
     // Pipe the stream to response
@@ -117,7 +155,9 @@ app.get('/api/formats', async (req, res) => {
       return res.status(400).json({ error: 'Invalid YouTube URL' });
     }
 
-    const info = await ytdl.getInfo(url);
+    const options = cookies ? { requestOptions: { headers: { cookie: cookies } } } : {};
+    const info = await ytdl.getInfo(url, options);
+    
     const formats = ytdl.filterFormats(info.formats, 'videoandaudio');
     
     const availableFormats = formats.map(format => ({
@@ -151,6 +191,13 @@ app.get('*', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
-  console.log(`API available at https://youtube-installer-1.onrender.com/${PORT}/api`);
+  
+  // Show appropriate URL based on environment
+  if (process.env.NODE_ENV === 'production') {
+    console.log(`API available at https://youtube-installer-1.onrender.com/api`);
+    console.log(`App available at https://youtube-installer-1.onrender.com`);
+  } else {
+    console.log(`API available at http://localhost:${PORT}/api`);
+    console.log(`App available at http://localhost:${PORT}`);
+  }
 });
-
