@@ -22,7 +22,7 @@ function App() {
     setVideoInfo(null);
 
     try {
-      const response = await axios.get(`http://localhost:5000/api/video-info?url=${encodeURIComponent(url)}`);
+      const response = await axios.get(`https://youtube-installer-1.onrender.com/1000/api/video-info?url=${encodeURIComponent(url)}`);
       setVideoInfo(response.data);
       setSuccess('Video information retrieved successfully!');
     } catch (error) {
@@ -297,3 +297,4 @@ function App() {
 }
 
 export default App;
+
